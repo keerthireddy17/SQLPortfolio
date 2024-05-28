@@ -1,1 +1,45 @@
+Task: Is to first identify the three best-performing industries based on the number of new unicorns 
+created in 2019, 2020, and 2021 combined.
 
+From those industries 
+(1) We'll  need to find the number of unicorns within these industries
+(2) the year that they became a unicorn
+(3) Their average valuation, converted to billions of dollars and rounded to two decimal places (4).
+
+WITH top_industries AS
+(
+    SELECT i.industry, 
+        COUNT(i.*)
+    FROM industries AS i
+    INNER JOIN dates AS d
+        ON i.company_id = d.company_id
+    WHERE EXTRACT(year FROM d.date_joined) in ('2019', '2020', '2021')
+    GROUP BY industry
+    ORDER BY count DESC
+    LIMIT 3
+),
+
+ranking_yearly AS 
+(
+    SELECT COUNT(i.*) AS num_unicorns,
+        i.industry,
+        EXTRACT(year FROM d.date_joined) AS year,
+        AVG(f.valuation) AS average_valuation
+    FROM industries AS i
+    INNER JOIN dates AS d
+        ON i.company_id = d.company_id
+    INNER JOIN funding AS f
+        ON d.company_id = f.company_id
+    GROUP BY industry, year
+)
+
+SELECT industry,
+    year,
+    num_unicorns,
+    ROUND(AVG(average_valuation / 1000000000), 2) AS average_valuation_billions
+FROM ranking_yearly
+WHERE year in ('2019', '2020', '2021')
+    AND industry in (SELECT industry
+                    FROM top_industries)
+GROUP BY industry, num_unicorns, year
+ORDER BY year DESC, num_unicorns DESC
